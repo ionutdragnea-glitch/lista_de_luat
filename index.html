@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lista Bagaje</title>
+<meta name="description" content="Listă de bagaje pentru excursii: adaugă, bifează și numără ce ți-a mai rămas de luat.">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lista Bagaje">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  :root{
+    --bg:#f4f6fb; --bg-soft:#ffffff; --card:#ffffff; --line:#e3e8f0;
+    --txt:#111827; --txt-dim:#6b7280; --txt-faint:#9ca3af;
+    --accent:#0d9488; --accent-soft:#ccfbf1; --accent-txt:#0f766e;
+    --danger:#e11d48; --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+    --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b1220; --bg-soft:#0f172a; --card:#131c2e; --line:#22304a;
+      --txt:#e8edf7; --txt-dim:#94a3b8; --txt-faint:#64748b;
+      --accent:#2dd4bf; --accent-soft:#134e4a; --accent-txt:#5eead4;
+      --danger:#fb7185; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom));
+    overscroll-behavior-y:none;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 14px}
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:var(--bg);
+    border-bottom:1px solid var(--line);
+    padding-top:env(safe-area-inset-top);
+  }
+  .hd{display:flex;align-items:center;gap:14px;padding:12px 0 12px}
+  .brand{flex:1;min-width:0}
+  .brand h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+  .brand p{margin:3px 0 0;font-size:12.5px;color:var(--txt-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ring{position:relative;width:64px;height:70px;flex:none}
+  .ring svg{transform:rotate(-90deg);display:block}
+  .ring .track{stroke:var(--line)}
+  .ring .bar{stroke:var(--accent);stroke-linecap:round;transition:stroke-dasharray .45s cubic-bezier(.22,1,.36,1)}
+  .ring b{position:absolute;top:0;left:0;right:0;height:64px;display:grid;place-items:center;font-size:19px;font-weight:700;letter-spacing:-.03em}
+  .ring small{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:9px;color:var(--txt-faint);text-transform:uppercase;letter-spacing:.06em}
+
+  .toolbar{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none}
+  .toolbar::-webkit-scrollbar{display:none}
+  .chip{
+    flex:none;border:1px solid var(--line);background:var(--card);color:var(--txt-dim);
+    padding:7px 12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:transform .12s;
+  }
+  .chip:active{transform:scale(.96)}
+  .chip.on{background:var(--accent-soft);border-color:transparent;color:var(--accent-txt)}
+  .chip.primary{background:var(--accent);border-color:transparent;color:#04201d}
+
+  /* ---------- Add bar ---------- */
+  .addbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background:var(--bg-soft);
+    border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  }
+  .addbar form{max-width:720px;margin:0 auto;display:flex;gap:8px;align-items:center}
+  .addbar input, .addbar select{
+    background:var(--card);border:1px solid var(--line);color:var(--txt);
+    border-radius:12px;padding:12px 12px;font-size:16px;min-width:0;
+  }
+  .addbar input{flex:1}
+  .addbar select{flex:none;max-width:40%;font-size:13px;color:var(--txt-dim)}
+  .addbar input:focus,.addbar select:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .addbtn{
+    flex:none;width:46px;height:46px;border:0;border-radius:14px;background:var(--accent);
+    color:#04201d;font-size:26px;line-height:1;font-weight:600;cursor:pointer;
+  }
+  .addbtn:active{transform:scale(.94)}
+
+  /* ---------- Categories ---------- */
+  .cat{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);margin:0 0 12px;overflow:hidden;
+  }
+  .cat-hd{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;user-select:none}
+  .cat-hd .ico{font-size:19px;flex:none}
+  .cat-hd h2{margin:0;font-size:15px;font-weight:700;flex:1;letter-spacing:-.01em}
+  .count{font-size:12px;font-weight:700;color:var(--txt-dim);background:var(--bg);border-radius:999px;padding:3px 9px;flex:none}
+  .count.done{background:var(--accent-soft);color:var(--accent-txt)}
+  .chev{flex:none;color:var(--txt-faint);transition:transform .2s;font-size:11px}
+  .cat.closed .chev{transform:rotate(-90deg)}
+  .cat.closed ul{display:none}
+  .cat ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+
+  li.item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  li.item:last-child{border-bottom:0}
+  .box{
+    flex:none;width:24px;height:24px;border-radius:8px;border:2px solid var(--line);
+    display:grid;place-items:center;cursor:pointer;transition:.15s;background:transparent;padding:0;
+  }
+  .box svg{width:14px;height:14px;stroke:#04201d;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.5);transition:.18s}
+  .item.done .box{background:var(--accent);border-color:var(--accent)}
+  .item.done .box svg{opacity:1;transform:scale(1)}
+  .name{flex:1;cursor:pointer;font-size:15.5px;word-break:break-word}
+  .item.done .name{color:var(--txt-faint);text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.6}
+  .del{
+    flex:none;background:none;border:0;color:var(--txt-faint);font-size:17px;padding:6px 4px;
+    cursor:pointer;border-radius:8px;opacity:.55;
+  }
+  .del:active{color:var(--danger);opacity:1}
+  .cat-del{flex:none;background:none;border:0;color:var(--txt-faint);font-size:15px;padding:4px;cursor:pointer;opacity:.5}
+
+  .empty{text-align:center;color:var(--txt-dim);padding:56px 20px}
+  .empty .big{font-size:46px;margin-bottom:10px}
+  .empty h3{margin:0 0 6px;font-size:17px;color:var(--txt)}
+  .empty p{margin:0 0 18px;font-size:14px;line-height:1.5}
+  .btn{
+    border:0;border-radius:12px;padding:12px 18px;font-size:15px;font-weight:700;cursor:pointer;
+    background:var(--accent);color:#04201d;
+  }
+
+  .allin{
+    display:flex;align-items:center;gap:10px;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-txt);border-radius:var(--radius);
+    padding:14px;font-weight:700;font-size:14.5px;margin-bottom:12px;
+  }
+  footer{text-align:center;color:var(--txt-faint);font-size:11.5px;padding:8px 0 20px}
+
+  /* toast */
+  #toast{
+    position:fixed;left:50%;transform:translateX(-50%) translateY(20px);
+    bottom:calc(86px + env(safe-area-inset-bottom));z-index:50;
+    background:var(--txt);color:var(--bg);padding:10px 16px;border-radius:999px;
+    font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;
+    max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  #toast.show{opacity:.96;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hd">
+      <div class="ring">
+        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="track" cx="32" cy="32" r="27" fill="none" stroke-width="6"></circle>
+          <circle id="ringBar" class="bar" cx="32" cy="32" r="27" fill="none" stroke-width="6" stroke-dasharray="0 170"></circle>
+        </svg>
+        <b id="ringNum">0</b>
+        <small id="ringLbl">rămase</small>
+      </div>
+      <div class="brand">
+        <h1>🎒 Lista Bagaje</h1>
+        <p id="sub">Nimic în listă încă</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="chip primary" id="btnCamping">⛺ Camping 5 zile</button>
+      <button class="chip" id="btnHide">👁 Ascunde luate</button>
+      <button class="chip" id="btnUncheck">↺ Debifează tot</button>
+      <button class="chip" id="btnNewCat">＋ Categorie</button>
+      <button class="chip" id="btnClear">🗑 Golește lista</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<footer>Lista se salvează local, pe telefonul tău.</footer>
+
+<div class="addbar">
+  <form id="addForm" autocomplete="off">
+    <input id="addInput" type="text" placeholder="Adaugă un bagaj…" enterkeyhint="done" maxlength="80">
+    <select id="addCat" aria-label="Categorie"></select>
+    <button class="addbtn" type="submit" aria-label="Adaugă">+</button>
+  </form>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+var KEY = "lista-bagaje-v1";
+
+/* ------------------ Lista specială: camping 5 zile ------------------ */
+var PRESET = [
+  ["Cort și dormit","⛺",["Cort (+ țăruși și corzi)","Folie / prelată sub cort","Ciocan pentru țăruși","Sac de dormit","Saltea gonflabilă sau izopren","Pompă pentru saltea","Pernă gonflabilă","Pătură groasă pentru seară","Covoraș la intrarea în cort"]],
+  ["Bucătărie de camping","🍳",["Aragaz de camping + butelie de rezervă","Brichetă și chibrituri impermeabile","Oală și tigaie","Tacâmuri, farfurii, căni","Cuțit bun + tocător","Deschizător de conserve","Detergent de vase + burete","Prosop de bucătărie","Ladă frigorifică + acumulatori de frig","Bidon de apă 10 L","Pastile sau filtru de purificare a apei","Folie alimentară + pungi ziplock","Saci menajeri"]],
+  ["Mâncare pentru 5 zile","🥫",["Apă plată (rezervă)","Cafea / ceai + zahăr","Sare, piper, condimente","Ulei","Paste, orez, mălai","Conserve (fasole, pate, ton)","Mezeluri și brânză","Ouă","Pâine / lipii","Legume (roșii, castraveți, ceapă)","Fructe","Batoane, nuci, snacksuri","Ciocolată / dulciuri","Bere sau vin pentru seară"]],
+  ["Îmbrăcăminte","👕",["Tricouri x5","Lenjerie x6","Șosete x6","Pantaloni scurți x2","Pantaloni lungi","Hanorac sau polar","Geacă impermeabilă","Pălărie / șapcă","Costum de baie","Papuci de duș","Bocanci sau adidași","Sandale","Pijama / trening de dormit","Ochelari de soare"]],
+  ["Igienă","🧼",["Prosoape din microfibră","Hârtie igienică","Șervețele umede","Periuță + pastă de dinți","Gel de duș biodegradabil","Șampon","Deodorant","Aparat și spumă de ras","Pieptene / perie","Cremă de protecție solară SPF 50","Balsam de buze","Dezinfectant de mâini","Produse de igienă personală"]],
+  ["Trusă medicală","💊",["Plasturi și feșe","Dezinfectant pentru răni","Paracetamol / ibuprofen","Antihistaminic (alergii)","Antidiareic + cărbune medicinal","Spray după înțepături","Pensetă pentru căpușe","Gel pentru arsuri solare","Medicamentele personale"]],
+  ["Lumină și energie","🔦",["Lanternă frontală + baterii","Felinar de camping","Powerbank 20.000 mAh","Cabluri de încărcare","Încărcător de mașină","Prelungitor (dacă are curent campingul)","Panou solar portabil"]],
+  ["Scule și diverse","🧰",["Briceag multifuncțional","Bandă adezivă (duct tape)","Paracord / sfoară","Sfoară de rufe + cârlige","Sac impermeabil (dry bag)","Spray anti-țânțari","Spirale sau lumânări anti-țânțari","Scaune pliante","Masă pliantă","Copertină / tarp pentru umbră","Folie de supraviețuire","Trusă mică de reparat cortul"]],
+  ["Documente și bani","🪪",["Buletin / pașaport","Permis auto + talon","Asigurare RCA / rovinietă","Card de sănătate","Bani cash","Card bancar","Rezervarea la camping","Telefon + husă impermeabilă"]],
+  ["Timp liber","🎲",["Cărți de joc","Joc de societate","Minge","Carte de citit","Aparat foto","Binoclu","Undiță și accesorii","Hartă offline / traseu de drumeție","Boxă portabilă"]]
+];
+
+/* ------------------ State ------------------ */
+var state = { cats:[], hideDone:false };
+var seq = 0;
+function uid(){ seq++; return Math.random().toString(36).slice(2,9) + "-" + seq; }
+
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return false;
+    var d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.cats)) return false;
+    state = { cats:d.cats, hideDone:!!d.hideDone };
+    return true;
+  }catch(e){ return false; }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+}
+
+function loadPreset(){
+  state.cats = PRESET.map(function(c){
+    return {
+      id: uid(), name: c[0], icon: c[1], open: true,
+      items: c[2].map(function(n){ return { id: uid(), name:n, done:false }; })
+    };
+  });
+  save(); render();
+  toast("Lista de camping a fost încărcată");
+}
+
+/* ------------------ Helpers ------------------ */
+function $(s){ return document.querySelector(s); }
+var app = $("#app"), toastEl = $("#toast"), toastT = null;
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastT);
+  toastT = setTimeout(function(){ toastEl.classList.remove("show"); }, 1900);
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function totals(){
+  var t=0,d=0;
+  state.cats.forEach(function(c){ c.items.forEach(function(i){ t++; if(i.done) d++; }); });
+  return { total:t, done:d, left:t-d };
+}
+function getCat(id){
+  return state.cats.filter(function(x){ return x.id===id; })[0];
+}
+function findItem(catId, itemId){
+  var c = getCat(catId);
+  if(!c) return null;
+  var i = c.items.filter(function(x){ return x.id===itemId; })[0];
+  return i ? {cat:c, item:i} : null;
+}
+
+/* ------------------ Render ------------------ */
+function render(){
+  var t = totals();
+
+  var R = 27, C = 2*Math.PI*R;
+  var pct = t.total ? t.done/t.total : 0;
+  $("#ringBar").setAttribute("stroke-dasharray", (C*pct).toFixed(1)+" "+C.toFixed(1));
+  $("#ringNum").textContent = t.left;
+  $("#ringLbl").textContent = t.left === 1 ? "rămas" : "rămase";
+  $("#sub").textContent = t.total
+    ? t.done + " din " + t.total + " luate · " + t.left + " de pus în bagaj"
+    : "Nimic în listă încă";
+
+  var hideBtn = $("#btnHide");
+  hideBtn.classList.toggle("on", state.hideDone);
+  hideBtn.textContent = state.hideDone ? "👁 Arată luate" : "👁 Ascunde luate";
+
+  var sel = $("#addCat"), prev = sel.value;
+  sel.innerHTML = state.cats.map(function(c){
+    return '<option value="'+c.id+'">'+esc(c.icon+" "+c.name)+'</option>';
+  }).join("") + '<option value="__new">＋ Categorie nouă…</option>';
+  if(prev && sel.querySelector('option[value="'+prev+'"]')) sel.value = prev;
+
+  if(!state.cats.length){
+    app.innerHTML =
+      '<div class="empty"><div class="big">🎒</div>'+
+      '<h3>Lista este goală</h3>'+
+      '<p>Începe cu lista gata făcută pentru camping<br>sau adaugă bagajele tale din bara de jos.</p>'+
+      '<button class="btn" id="emptyPreset">⛺ Încarcă lista de camping (5 zile)</button></div>';
+    $("#emptyPreset").onclick = loadPreset;
+    return;
+  }
+
+  var html = "";
+  if(t.total && t.left === 0){
+    html += '<div class="allin">✅ Gata! Ai tot ce îți trebuie ('+t.total+' bagaje).</div>';
+  }
+
+  state.cats.forEach(function(c){
+    var cd = c.items.filter(function(i){ return i.done; }).length;
+    var visible = state.hideDone ? c.items.filter(function(i){ return !i.done; }) : c.items;
+    html +=
+      '<section class="cat'+(c.open===false?" closed":"")+'" data-cat="'+c.id+'">'+
+        '<div class="cat-hd" data-act="toggle-cat">'+
+          '<span class="ico">'+esc(c.icon||"📦")+'</span>'+
+          '<h2>'+esc(c.name)+'</h2>'+
+          '<span class="count'+(c.items.length && cd===c.items.length ? " done" : "")+'">'+cd+'/'+c.items.length+'</span>'+
+          '<button class="cat-del" data-act="del-cat" aria-label="Șterge categoria">✕</button>'+
+          '<span class="chev">▼</span>'+
+        '</div>'+
+        '<ul>'+
+          (visible.length ? visible.map(function(i){
+            return '<li class="item'+(i.done?" done":"")+'" data-item="'+i.id+'">'+
+              '<button class="box" data-act="toggle" aria-label="Bifează"><svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg></button>'+
+              '<span class="name" data-act="toggle">'+esc(i.name)+'</span>'+
+              '<button class="del" data-act="del" aria-label="Șterge">✕</button>'+
+            '</li>';
+          }).join("")
+          : '<li class="item"><span class="name" style="color:var(--txt-faint);font-size:14px">'+
+             (c.items.length ? "Toate sunt luate ✅" : "Categorie goală")+'</span></li>')+
+        '</ul>'+
+      '</section>';
+  });
+  app.innerHTML = html;
+}
+
+/* ------------------ Events ------------------ */
+app.addEventListener("click", function(e){
+  var el = e.target.closest("[data-act]");
+  if(!el) return;
+  var act = el.getAttribute("data-act");
+  var catEl = el.closest("[data-cat]");
+  var catId = catEl && catEl.getAttribute("data-cat");
+  var itemEl = el.closest("[data-item]");
+  var itemId = itemEl && itemEl.getAttribute("data-item");
+
+  if(act === "toggle-cat"){
+    var c = getCat(catId);
+    if(c){ c.open = (c.open === false); save(); render(); }
+    return;
+  }
+  if(act === "del-cat"){
+    e.stopPropagation();
+    var cc = getCat(catId);
+    if(!cc) return;
+    if(confirm('Ștergi categoria „'+cc.name+'” cu '+cc.items.length+' bagaje?')){
+      state.cats = state.cats.filter(function(x){ return x.id!==catId; });
+      save(); render(); toast("Categorie ștearsă");
+    }
+    return;
+  }
+  if(act === "toggle"){
+    var f = findItem(catId, itemId);
+    if(f){ f.item.done = !f.item.done; save(); render(); }
+    return;
+  }
+  if(act === "del"){
+    var f2 = findItem(catId, itemId);
+    if(f2){
+      var nume = f2.item.name;
+      f2.cat.items = f2.cat.items.filter(function(x){ return x.id!==itemId; });
+      save(); render(); toast("Șters: " + nume);
+    }
+  }
+});
+
+$("#addForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  var input = $("#addInput");
+  var name = input.value.trim();
+  if(!name) return;
+
+  var catId = $("#addCat").value;
+  var cat;
+  if(!state.cats.length || !catId || catId === "__new"){
+    var nm = "Bagajele mele";
+    if(catId === "__new"){
+      nm = prompt("Numele categoriei noi:", "Diverse");
+      if(!nm || !nm.trim()) return;
+    }
+    cat = { id:uid(), name:nm.trim(), icon:"📦", open:true, items:[] };
+    state.cats.push(cat);
+  } else {
+    cat = getCat(catId);
+  }
+  cat.open = true;
+  cat.items.push({ id:uid(), name:name, done:false });
+  input.value = "";
+  save(); render();
+  $("#addCat").value = cat.id;
+  input.focus();
+});
+
+$("#addCat").addEventListener("change", function(){
+  if(this.value !== "__new") return;
+  var nm = prompt("Numele categoriei noi:", "");
+  if(nm && nm.trim()){
+    var c = { id:uid(), name:nm.trim(), icon:"📦", open:true, items:[] };
+    state.cats.push(c); save(); render();
+    $("#addCat").value = c.id;
+    $("#addInput").focus();
+  } else {
+    render();
+  }
+});
+
+$("#btnCamping").onclick = function(){
+  if(state.cats.length && !confirm("Înlocuiești lista actuală cu lista de camping pentru 5 zile?")) return;
+  loadPreset();
+};
+$("#btnHide").onclick = function(){ state.hideDone = !state.hideDone; save(); render(); };
+$("#btnUncheck").onclick = function(){
+  var t = totals();
+  if(!t.done){ toast("Nu ai nimic bifat"); return; }
+  if(!confirm("Debifezi toate cele "+t.done+" bagaje luate?")) return;
+  state.cats.forEach(function(c){ c.items.forEach(function(i){ i.done=false; }); });
+  save(); render(); toast("Am debifat tot");
+};
+$("#btnNewCat").onclick = function(){
+  var nm = prompt("Numele categoriei noi:", "");
+  if(!nm || !nm.trim()) return;
+  state.cats.push({ id:uid(), name:nm.trim(), icon:"📦", open:true, items:[] });
+  save(); render();
+};
+$("#btnClear").onclick = function(){
+  if(!state.cats.length){ toast("Lista e deja goală"); return; }
+  if(!confirm("Ștergi TOATĂ lista? Acțiunea nu poate fi anulată.")) return;
+  state.cats = []; save(); render(); toast("Listă golită");
+};
+
+/* ------------------ Start ------------------ */
+if(!load()) state = { cats:[], hideDone:false };
+render();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+})();
+</script>
+</body>
+</html>
